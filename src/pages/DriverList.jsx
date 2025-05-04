@@ -19,9 +19,10 @@ export default function DriverList() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(1);
   const [search, setSearch] = useState("");
-  const [debouncedSearch] = useDebouncedValue(search, 400); // ⬅️ debounce 400 ms
+  const [debouncedSearch] = useDebouncedValue(search, 400);
   const [loading, setLoading] = useState(false);
-  const [opened, { open, close }] = useDisclosure(false);
+
+  const [addOpen, addHandlers] = useDisclosure(false);
   const [drawerId, setDrawerId] = useState(null);
 
   /* ---------------- fetch ---------------- */
@@ -30,7 +31,7 @@ export default function DriverList() {
     try {
       const res = await api.get("/drivers", {
         params: {
-          first_name: debouncedSearch || undefined, // ⬅️ use debounced value
+          first_name: debouncedSearch || undefined,
           sortBy: "last_name",
           sortOrder: "asc",
           page,
@@ -55,33 +56,10 @@ export default function DriverList() {
     }
   };
 
-  /* Re‑fetch when page OR debouncedSearch changes */
   useEffect(() => {
     fetchDrivers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, debouncedSearch]);
-
-  /* ---------------- rows ---------------- */
-  const rows =
-    drivers.length > 0 ? (
-      drivers.map((d) => (
-        <tr
-          key={d._id}
-          style={{ cursor: "pointer" }}
-          onClick={() => setDrawerId(d._id)}
-        >
-          <td>{d.licence_number}</td>
-          <td>{d.first_name}</td>
-          <td>{d.last_name}</td>
-        </tr>
-      ))
-    ) : (
-      <tr>
-        <td colSpan={3} style={{ textAlign: "center", padding: "1rem" }}>
-          No results
-        </td>
-      </tr>
-    );
 
   /* ---------------- UI ---------------- */
   return (
@@ -93,16 +71,10 @@ export default function DriverList() {
             value={search}
             onChange={(e) => setSearch(e.currentTarget.value)}
           />
-          {/* optional manual trigger */}
-          <Button
-            onClick={() => {
-              setPage(1);
-              fetchDrivers();
-            }}
-          >
+          <Button onClick={() => { setPage(1); fetchDrivers(); }}>
             Search
           </Button>
-          <Button variant="outline" onClick={open}>
+          <Button variant="outline" onClick={addHandlers.open}>
             Add
           </Button>
         </Group>
@@ -117,34 +89,38 @@ export default function DriverList() {
           withBorder
           withColumnBorders
           verticalSpacing="sm"
-          sx={{ tableLayout: "fixed", width: "100%" }} // full width
+          sx={{ width: "100%", tableLayout: "fixed" }}
         >
+          <colgroup>
+            <col style={{ width: "25%" }} />
+            <col style={{ width: "37.5%" }} />
+            <col style={{ width: "37.5%" }} />
+          </colgroup>
+
           <thead>
             <tr>
-              <th style={{ width: "25%" }}>Licence</th>
-              <th style={{ width: "37.5%" }}>First</th>
-              <th style={{ width: "37.5%" }}>Last</th>
+              <th>Licence</th>
+              <th>First</th>
+              <th>Last</th>
             </tr>
           </thead>
+
           <tbody>
-            {drivers.length > 0 ? (
+            {drivers.length ? (
               drivers.map((d) => (
                 <tr
                   key={d._id}
                   style={{ cursor: "pointer" }}
-                  onClick={() => setDrawerId(d._id)}
+                  onClick={() => setDrawerId(d.licence_number)}
                 >
-                  <td style={{ width: "25%" }}>{d.licence_number}</td>
-                  <td style={{ width: "37.5%" }}>{d.first_name}</td>
-                  <td style={{ width: "37.5%" }}>{d.last_name}</td>
+                  <td>{d.licence_number}</td>
+                  <td>{d.first_name}</td>
+                  <td>{d.last_name}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td
-                  colSpan={3}
-                  style={{ textAlign: "center", padding: "1rem" }}
-                >
+                <td colSpan={3} style={{ textAlign: "center", padding: "1rem" }}>
                   No results
                 </td>
               </tr>
@@ -155,12 +131,12 @@ export default function DriverList() {
 
       <Pagination mt="md" total={total} value={page} onChange={setPage} />
 
+      {/* modals / drawers */}
       <AddDriverModal
-        opened={opened}
-        onClose={close}
+        opened={addOpen}
+        onClose={addHandlers.close}
         onCreated={fetchDrivers}
       />
-
       <DriverDrawer
         id={drawerId}
         opened={Boolean(drawerId)}
